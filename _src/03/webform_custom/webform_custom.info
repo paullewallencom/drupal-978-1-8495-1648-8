@@ -1,0 +1,6 @@
+name = Webform Custom
+description = Customize Webform Results page.
+core = 7.x
+package = Webform
+dependencies[] = webform
+

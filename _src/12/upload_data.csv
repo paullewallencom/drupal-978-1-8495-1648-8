@@ -1,0 +1,4 @@
+"name","surname","preferred_username","email_address","acceptance","film_genres","SID"
+"John","Doe","johnd","johnd@example.com",0,"0,3,3,2,1",
+"Jane","Doe","janed","janed@example.com",0,"2,2,2,3,1",
+"Tom","Smith","tomtom","tom@example.com",0,"3,3,3,0,1",

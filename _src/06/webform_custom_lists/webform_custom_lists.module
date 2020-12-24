@@ -1,0 +1,34 @@
+<?php
+
+/**
+ * Implements hook_webform_select_options_info().
+ *
+ * Define callbacks that can be used as custom select list options.
+ */
+function webform_custom_lists_webform_select_options_info() {
+  $items = array();
+
+  $items['titles'] = array(
+    'title' => t('Honorific titles'),
+    'options callback' => 'webform_custom_options_titles',
+  );
+
+  return $items;
+}
+
+/**
+ * Option list containing honorific titles.
+ */
+function webform_custom_options_titles() {
+  $titles = array(
+    'Mr' => 'Mr',
+    'Mrs' => 'Mrs',
+    'Ms' => 'Ms',
+    'Prof' => 'Prof',
+    'Dr' => 'Dr',
+    'Hon' => 'Hon',
+    'Rev' => 'Rev',
+  );
+
+  return $titles;
+}

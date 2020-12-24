@@ -1,0 +1,5 @@
+name = Webform Custom Lists
+description = Custom option lists for Webform select components.
+core = 7.x
+package = Webform
+dependencies[] = webform

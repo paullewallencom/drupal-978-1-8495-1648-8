@@ -1,0 +1,29 @@
+fieldset {
+  border:3px dashed;
+}
+
+legend {
+  font-size: 1em;
+  line-height: 1.8em;
+  font-weight: bolder;
+  background-color: #e5e5e5;
+}
+
+label {
+  text-decoration: underline;
+  font-weight: normal;
+}
+
+input {
+  font-weight: bolder;
+}
+
+#edit-submitted-speaker-details-first-name {
+  color: white;
+  background-color: blue;
+  width: 66px;
+}
+
+#webform-component-presentation-details {
+  display: none;
+}

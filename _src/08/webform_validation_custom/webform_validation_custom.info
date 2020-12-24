@@ -1,0 +1,6 @@
+name = Webform Validation Custom
+description = Custom validation rules for Webforms.
+core = 7.x
+package = Webform
+dependencies[] = webform
+dependencies[] = webform_validation

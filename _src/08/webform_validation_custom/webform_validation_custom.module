@@ -1,0 +1,103 @@
+<?php
+
+/**
+ * @file
+ * Webform Validation Custom.
+ */
+
+/**
+ * Implements hook_webform_validation_validators().
+ */
+function webform_validation_custom_webform_validation_validators() {
+  return array(
+    'uniqueconcatenated' => array(
+      'name' => 'Unique concatenated values',
+      'component_types' => array(
+        'textfield',
+        'email',
+        'hidden',
+      ),
+      'custom_error' => TRUE,
+      'min_components' => 2,
+      'description' => t('Verifies that a concatenation of selected user-entered values is unique'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_webform_validation_validate().
+ */
+function webform_validation_custom_webform_validation_validate($validator_name, $items, $components, $rule) {
+  global $user;
+
+  if ($items && $user->uid == 0) {
+    $errors = array();
+    switch ($validator_name) {
+      case 'uniqueconcatenated':
+        $errors = webform_validation_custom_uniqueconcatenated($items, $rule);
+        return $errors;
+        break;
+    }
+  }
+}
+
+/**
+ * Search previous submissions for occurrences of what should be a
+ * unique concatenation of two or more user input field values.
+ *
+ * @param array $items
+ *   The items (component values) applicable to this validation rule.
+ * @param array $rule
+ *   An array of data defining the validation rule.
+ * @return array
+ *   An error if duplicates were found, or empty if no duplicates.
+ */
+function webform_validation_custom_uniqueconcatenated($items, $rule) {
+  $errors = array();
+
+  // Build concatenated search criteria and get component id's.
+  $search = '';
+  $cids = array();
+  foreach ($rule['components'] as $key => $component) {
+    $index = 'item_' . $component['cid'];
+    $search = $search . $items[$index];
+    $cids[] = $component['cid'];
+  }
+  $search = strtolower($search);
+
+  // Retrieve all submitted data for required components from database.
+  $nid = $rule['nid'];
+  $submissions = db_select('webform_submitted_data', 'wsd')
+    ->fields('wsd', array('sid', 'cid', 'data'))
+    ->condition('nid', $nid)
+    ->condition('cid', $cids, 'IN')
+    ->condition('no', 0)
+    ->orderBy('sid')
+    ->orderBy('cid')
+    ->execute()
+    ->fetchAll();
+
+  // Build array of comparison strings from all submissions.
+  $previous = array();
+  foreach ($submissions as $submitted) {
+    $index = $submitted->sid;
+    $value = strtolower($submitted->data);
+    if (isset($previous[$index])) {
+      $previous[$index] = $previous[$index] . $value;
+    }
+    else {
+      $previous[$index] = $value;
+    }
+  }
+
+  // Error if one or more submissions match our search criteria.
+  if ($previous) {
+    $matches = array_keys($previous, $search);
+    if (count($matches) > 0) {
+      $index = 'item_' . $cids[0];
+      $errors[$index] = _webform_validation_i18n_error_message($rule);
+    }
+  }
+
+  return $errors;
+}
