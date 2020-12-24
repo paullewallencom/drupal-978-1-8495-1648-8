@@ -1,0 +1,349 @@
+<?php
+/**
+ * @file
+ * Webform International Mobile Equipment Identity (IMEI) Custom Component.
+ */
+
+/**
+ * Implements hook_webform_component_info().
+ */
+function webform_imei_webform_component_info() {
+  $components = array();
+  $components['imei'] = array(
+    'label' => t('IMEI'),
+    'description' => t('IMEI number type.'),
+    'features' => array(
+      'csv' => TRUE,
+      'email' => TRUE,
+      'email_address' => FALSE,
+      'email_name' => FALSE,
+      'required' => TRUE,
+      'conditional' => TRUE,
+      'title_display' => TRUE,
+      'title_inline' => TRUE,
+      'private' => TRUE,
+      'group' => FALSE,
+      'spam_analysis' => FALSE,
+      'attachment' => FALSE,
+    ),
+  );
+  return $components;
+}
+
+/**
+ * Implements _webform_defaults_component().
+ */
+function _webform_defaults_imei() {
+  return array(
+    'name' => '',
+    'form_key' => NULL,
+    'pid' => 0,
+    'weight' => 0,
+    'value' => '',
+    'mandatory' => TRUE,
+    'extra' => array(
+      'size' => '',
+      'maxlength' => '25',
+      'disabled' => 0,
+      'unique' => TRUE,
+      'title_display' => 0,
+      'description' => t('The IMEI number for your device can be found inside the battery compartment, or by entering <strong>*#06#</strong> on the keypad.'),
+      'attributes' => array(),
+      'private' => FALSE,
+    ),
+  );
+}
+
+/**
+ * Implements _webform_edit_component().
+ */
+function _webform_edit_imei($component) {
+  $form = array();
+
+  $form['value'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default value'),
+    '#default_value' => $component['value'],
+    '#description' => t('The default value of the field.'),
+    '#size' => 60,
+    '#maxlength' => 1024,
+    '#weight' => 0,
+  );
+  $form['display']['size'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Width'),
+    '#default_value' => $component['extra']['size'],
+    '#description' => t('Width of the textfield.') . ' ' . t('Leaving blank will use the default size.'),
+    '#size' => 5,
+    '#maxlength' => 10,
+    '#weight' => 0,
+    '#parents' => array('extra', 'size'),
+  );
+  $form['validation']['unique'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Unique'),
+    '#return_value' => 1,
+    '#description' => t('Check that all entered values for this field are unique. The same value is not allowed to be used twice.'),
+    '#weight' => 1,
+    '#default_value' => $component['extra']['unique'],
+    '#parents' => array('extra', 'unique'),
+  );
+  $form['validation']['maxlength'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maxlength'),
+    '#default_value' => $component['extra']['maxlength'],
+    '#description' => t('Maximum length of the textfield value.'),
+    '#size' => 5,
+    '#maxlength' => 10,
+    '#weight' => 2,
+    '#parents' => array('extra', 'maxlength'),
+  );
+
+  return $form;
+}
+
+/**
+ * Render a Webform component to be part of a form.
+ */
+function _webform_render_imei($component, $value = NULL, $filter = TRUE) {
+  $element = array(
+    '#type' => 'textfield',
+    '#title' => $filter ? _webform_filter_xss($component['name']) : $component['name'],
+    '#title_display' => $component['extra']['title_display'] ? $component['extra']['title_display'] : 'before',
+    '#default_value' => $filter ? _webform_filter_values($component['value'], NULL, NULL, NULL, FALSE) : $component['value'],
+    '#required' => $component['mandatory'],
+    '#weight' => $component['weight'],
+    '#description' => $filter ? _webform_filter_descriptions($component['extra']['description']) : $component['extra']['description'],
+    '#attributes' => $component['extra']['attributes'],
+    '#theme_wrappers' => array('webform_element'),
+    '#webform_component' => $component,
+    '#element_validate' => array('webform_imei_validate_imei'),
+  );
+
+  // Enforce uniqueness.
+  if ($component['extra']['unique']) {
+    $element['#element_validate'][] = 'webform_imei_validate_imei_unique';
+  }
+
+  // Change the 'width' option to the correct 'size' option.
+  if ($component['extra']['size'] > 0) {
+    $element['#size'] = $component['extra']['size'];
+  }
+  if ($component['extra']['maxlength'] > 0) {
+    $element['#maxlength'] = $component['extra']['maxlength'];
+  }
+
+  if (isset($value)) {
+    $element['#default_value'] = $value[0];
+  }
+
+  return $element;
+}
+
+/**
+ * Display the result of a submission for a component.
+ */
+function _webform_display_imei($component, $value, $format = 'html') {
+  return array(
+    '#title' => $component['name'],
+    '#weight' => $component['weight'],
+    '#theme' => 'webform_display_imei',
+    '#theme_wrappers' => $format == 'html' ? array('webform_element') : array('webform_element_text'),
+    '#post_render' => array('webform_element_wrapper'),
+    '#component' => $component,
+    '#format' => $format,
+    '#value' => isset($value[0]) ? webform_imei_display_format($value[0]) : '',
+    '#webform_component' => $component,
+  );
+}
+
+/**
+ * Module specific instance of hook_theme().
+ *
+ * This allows each Webform component to add information into hook_theme().
+ */
+function _webform_theme_imei() {
+  return array(
+    'webform_display_imei' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+/**
+ * Format the output of data for this component.
+ */
+function theme_webform_display_imei($variables) {
+  $element = $variables['element'];
+  $value = $element['#format'] == 'html' ? check_plain($element['#value']) : $element['#value'];
+  return $value !== '' ? $value : ' ';
+}
+
+/**
+ * Return the result of a component value for display in a table.
+ */
+function _webform_table_imei($component, $value) {
+  return check_plain(empty($value[0]) ? '' : $value[0]);
+}
+
+/**
+ * Return the heading for this component to be displayed in a CSV file.
+ */
+function _webform_csv_headers_imei($component, $export_options) {
+  $header = array();
+  $header[0] = '';
+  $header[1] = '';
+  $header[2] = $component['name'];
+  return $header;
+}
+
+/**
+ * Format the submitted data of a component for CSV downloading.
+ */
+function _webform_csv_data_imei($component, $export_options, $value) {
+  return !isset($value[0]) ? '' : webform_imei_display_format($value[0]);
+}
+
+/**
+ * Format IMEI component data to display as 12345678-123456-1.
+ */
+function webform_imei_display_format($value) {
+  $value = substr($value, 0, 8) . '-' . substr($value, 8, 6) . '-' . substr($value, 14, 1);
+  return $value;
+}
+
+/**
+ * Implements _webform_analysis_component().
+ */
+function _webform_analysis_imei($component, $sids = array()) {
+  $query = db_select('webform_submitted_data', 'wsd', array('fetch' => PDO::FETCH_ASSOC))
+    ->fields('wsd', array('data'))
+    ->condition('nid', $component['nid'])
+    ->condition('cid', $component['cid']);
+
+  if (count($sids)) {
+    $query->condition('sid', $sids, 'IN');
+  }
+
+  $nonblanks = 0;
+  $submissions = 0;
+
+  $result = $query->execute();
+  foreach ($result as $data) {
+    if (drupal_strlen(trim($data['data'])) > 0) {
+      $nonblanks++;
+    }
+    $submissions++;
+  }
+
+  $rows[0] = array(t('Left Blank'), ($submissions - $nonblanks));
+  $rows[1] = array(t('User entered value'), $nonblanks);
+
+  return $rows;
+}
+
+/**
+ * Form API Validation function to validate IMEI numbers on client form.
+ */
+function webform_imei_validate_imei($form_element, &$form_state) {
+  $error = FALSE;
+  // Strip all non-numeric characters from supplied IMEI number.
+  $number = preg_replace('/\D/', '', trim($form_element['#value']));
+  $len = drupal_strlen($number);
+
+  switch ($len) {
+    case 14:
+      // Needs check digit.
+      $number .= '0';
+      $checkdigit = webform_imei_luhn($number, FALSE);
+      $number = substr($number, 0, -1) . $checkdigit;
+      break;
+    case 15:
+      // Has a check digit, validate it.
+      if (!webform_imei_luhn($number, TRUE)) {
+        $error = TRUE;
+      }
+      break;
+    case 16:
+      // Has Software Version Number, needs check digit.
+      $number = substr($number, 0, -2) . '0';
+      $checkdigit = webform_imei_luhn($number, FALSE);
+      $number = substr($number, 0, -1) . $checkdigit;
+      break;
+    default:
+      // Incorrect number of digits.
+      $error = TRUE;
+      break;
+  }
+
+  if ($error) {
+    if ($len > 0) {
+      form_error($form_element, t('%value is not a valid IMEI number.', array('%value' => trim($form_element['#value']))));
+    }
+  }
+  else {
+    form_set_value($form_element, array($number), $form_state);
+  }
+}
+
+/**
+ * Validate that IMEI value is unique with no duplicates in the database.
+ */
+function webform_imei_validate_imei_unique($element, $form_state) {
+  if ($element['#value'] !== '') {
+    $nid = $form_state['values']['details']['nid'];
+    $sid = $form_state['values']['details']['sid'] === '' ? -1 : $form_state['values']['details']['sid'];
+    $cid = $element['#webform_component']['cid'];
+
+    $form_key = $element['#webform_component']['form_key'];
+    $number = $form_state['values']['submitted'][$form_key][0];
+
+    $count = db_select('webform_submitted_data')
+      ->fields('webform_submitted_data', array('sid'))
+      ->condition('nid', $nid)
+      ->condition('sid', $sid, '<>')
+      ->condition('cid', $cid)
+      ->condition('data', $number)
+      ->range(0, 1)
+      ->execute()
+      ->fetchField();
+
+    if ($count) {
+      form_error($element, t('The value %value has already been submitted once for the %title field. You may have already submitted this form, or you need to use a different value.', array('%value' => $element['#value'], '%title' => $element['#title'])));
+    }
+  }
+}
+
+/**
+ * Implements Luhn algorithm to validate IMEI or obtain check digit
+ */
+function webform_imei_luhn($number, $validate = TRUE) {
+  settype($number, 'string');
+  $sum = 0;
+  $double = 0;
+  $count = strlen($number) - 1;
+  for ($i = $count; $i >= 0; $i--) {
+    if ($double++ & 0x1) {
+      // Even-numbered digit, add double the digit value.
+      $digit_value = $number[$i] * 2;
+      if ($digit_value > 9) {
+        // If > 9, add up the digits that make up the the product,
+        // e.g. 8 * 2 = 16 => [1 + 6 = 7], or [16 - 9 = 7].
+        $digit_value = $digit_value - 9;
+      }
+    }
+    else {
+      // Odd-numbered digit, add as-is.
+      $digit_value = $number[$i];
+    }
+    $sum = $sum + $digit_value;
+  }
+
+  // Return validation boolean, else the check digit.
+  if ($validate) {
+    return $sum % 10 === 0;
+  }
+  else {
+    return 10 - ($sum % 10);
+  }
+}
